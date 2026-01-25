@@ -1,0 +1,50 @@
+# Example configuration file
+# Copy to config.yaml and customize
+
+docker:
+  # Docker socket location (usually /var/run/docker.sock on Linux)
+  socket: "unix://var/run/docker.sock"
+  
+  # Containers to monitor (empty list = all containers)
+  containers: []
+  
+  # How many days of logs to collect per container
+  log_days: 1
+
+database:
+  # SQLite database path
+  path: "data/logs.db"
+
+ollama:
+  # Ollama API endpoint
+  host: "http://localhost:11434"
+  
+  # Model to use for summarization
+  model: "llama3.2"
+  
+  # Temperature for generation (0.0 = deterministic, 1.0 = creative)
+  temperature: 0.3
+
+email:
+  # SMTP settings
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "your-email@gmail.com"
+  smtp_password: "your-app-password"
+  
+  # Email details
+  from_address: "your-email@gmail.com"
+  to_addresses:
+    - "recipient@example.com"
+  
+  subject: "Daily Docker Log Summary - {date}"
+
+monitoring:
+  # Run time (24-hour format)
+  schedule_time: "06:00"
+  
+  # Minimum error count to include in summary
+  error_threshold: 1
+  
+  # Include info-level logs in analysis
+  include_info: false
