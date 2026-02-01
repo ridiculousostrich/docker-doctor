@@ -5,6 +5,9 @@ Retrieves logs from Docker containers.
 
 import docker
 
+def get_docker_client():
+    """Get Docker client configured for SSH tunnel."""
+    return docker.DockerClient(base_url='tcp://localhost:2375')
 
 def get_container_logs(container_name, tail=100):
     """
@@ -17,7 +20,7 @@ def get_container_logs(container_name, tail=100):
     Returns:
         str: Container logs
     """
-    client = docker.from_env()
+    client = get_docker_client()
     container = client.containers.get(container_name)
     logs = container.logs(tail=tail).decode('utf-8')
     return logs
@@ -29,7 +32,7 @@ if __name__ == "__main__":
 
     # Try to list containers
     try:
-        client = docker.from_env()
+        client = docker.DockerClient(base_url='tcp://localhost:2375')
         containers = client.containers.list()
         print(f"\nFound {len(containers)} running containers:")
         for container in containers:
