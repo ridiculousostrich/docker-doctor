@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.collectors.docker_collector import get_docker_client
 from src.database.queries import add_container, add_log_entry
+from src.analyzers.log_parser import parse_log_line
 
 
 def collect_logs_from_container(container_name, tail=100):
@@ -50,10 +51,15 @@ def collect_logs_from_container(container_name, tail=100):
     logs_stored = 0
     for line in log_lines:
         if line.strip():  # Skip empty lines
-            # For now, we'll store all logs as INFO level
-            # (We'll add log level detection later)
-            add_log_entry(container_id, line, log_level="INFO")
-            logs_stored += 1
+            # Parse the log line to detect level
+            parsed = parse_log_line(line)
+            if parsed:
+                add_log_entry(
+                    container_id=container_id,
+                    message=parsed['message'],
+                    log_level=parsed['level']
+                )
+                logs_stored += 1
 
     print(f"  Stored {logs_stored} log entries in database")
 
