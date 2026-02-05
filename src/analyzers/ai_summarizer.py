@@ -94,12 +94,23 @@ Warnings: {warning_count}
             prompt += f"{i}. {warning}\n"
 
     prompt += """
-Provide a concise 2-3 sentence summary that:
-1. Identifies the main issues or patterns
-2. Assesses severity (critical, concerning, or minor)
-3. Suggests if action is needed
+Analyze these logs and provide a brief summary in plain text (no markdown formatting).
 
-Keep it brief and actionable."""
+Your summary should:
+1. Identify the main pattern or issue in 1-2 sentences
+2. Assess severity: CRITICAL (service down/data loss), CONCERNING (degraded performance/unusual), or MINOR (normal noise)
+3. State if action is needed in 1 sentence
+
+Context for common patterns:
+- "context canceled" / "connection aborted" = Usually client disconnects (minor unless extreme volume)
+- Repeated identical errors = Often noise, not escalating issues
+- "getaddrinfo ENOTFOUND" = DNS/network client issues, not server problems
+- "duplicate key" database errors = Data integrity issue, concerning if frequent
+- Authentication failures = Could be bots/invalid attempts (minor) or config issues (concerning)
+
+Key question: Is the SERVICE actually impaired, or just handling normal internet noise?
+
+Format: Write 2-3 sentences of plain text. No bullet points, no markdown headers, no special formatting."""
 
     try:
         # Call Ollama API
