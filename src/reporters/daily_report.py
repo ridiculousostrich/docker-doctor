@@ -3,6 +3,7 @@ Generate daily reports from summaries.
 """
 
 import sys
+import textwrap
 from pathlib import Path
 from datetime import datetime
 
@@ -101,7 +102,9 @@ def generate_daily_report(date=None):
             report.append(f"{status} {name}")
             report.append(f"   Logs: {total} | Errors: {errors} | Warnings: {warnings}")
             if summary:
-                report.append(f"   Summary: {summary}")
+                # Wrap the summary text to 66 characters (70 minus the "   Summary: " prefix)
+                wrapped = textwrap.fill(summary, width=66, subsequent_indent="            ")
+                report.append(f"   Summary: {wrapped}")
             report.append("")
 
     # Healthy containers
