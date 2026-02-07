@@ -14,13 +14,13 @@ from src.database.queries import add_container, add_log_entry
 from src.analyzers.log_parser import parse_log_line
 
 
-def collect_logs_from_container(container_name, tail=100):
+def collect_logs_from_container(container_name, tail=None):
     """
     Collect logs from a specific container and store in database.
 
     Args:
         container_name (str): Name of the container
-        tail (int): Number of recent log lines to retrieve
+        tail (int): DEPRECATED - now collects last 24 hours
 
     Returns:
         dict: Summary of collection (container_id, logs_collected)
@@ -39,8 +39,14 @@ def collect_logs_from_container(container_name, tail=100):
         image=container.image.tags[0] if container.image.tags else None
     )
 
-    # Get logs from container
-    logs = container.logs(tail=tail).decode('utf-8')
+    # Get logs from last 24 hours
+    from datetime import datetime, timedelta
+
+    # Calculate timestamp for 24 hours ago
+    since = datetime.now() - timedelta(hours=24)
+
+    # Get logs since that timestamp
+    logs = container.logs(since=since).decode('utf-8')
 
     # Split into individual lines
     log_lines = logs.strip().split('\n')
@@ -70,12 +76,12 @@ def collect_logs_from_container(container_name, tail=100):
     }
 
 
-def collect_logs_from_all_containers(tail=100):
+def collect_logs_from_all_containers(tail=None):
     """
     Collect logs from all running containers.
 
     Args:
-        tail (int): Number of recent log lines per container
+        tail (int): DEPRECATED - now collects last 24 hours
 
     Returns:
         list: List of collection summaries
