@@ -116,7 +116,7 @@ Format: Write 2-3 sentences of plain text. No bullet points, no markdown headers
         # Call Ollama API
         client = ollama.Client(host='http://192.168.1.9:11434')
         response = client.chat(
-            model='llama3.1:8B',
+            model='qwen2.5:32b-instruct-q4_K_M',
             messages=[{
                 'role': 'user',
                 'content': prompt
