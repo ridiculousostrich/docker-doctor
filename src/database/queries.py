@@ -57,7 +57,7 @@ def add_container(name, image=None):
     return container_id
 
 
-def add_log_entry(container_id, message, log_level=None):
+def add_log_entry(container_id, message, log_level=None, timestamp=None):
     """
     Add a log entry to the database.
 
@@ -65,6 +65,7 @@ def add_log_entry(container_id, message, log_level=None):
         container_id (int): ID of the container
         message (str): Log message
         log_level (str): Log level (INFO, WARN, ERROR, etc.)
+        timestamp (str): Custom timestamp (optional, defaults to now)
 
     Returns:
         int: Log entry ID
@@ -72,10 +73,16 @@ def add_log_entry(container_id, message, log_level=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT INTO log_entries (container_id, message, log_level)
-        VALUES (?, ?, ?)
-    """, (container_id, message, log_level))
+    if timestamp:
+        cursor.execute("""
+            INSERT INTO log_entries (container_id, message, log_level, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (container_id, message, log_level, timestamp))
+    else:
+        cursor.execute("""
+            INSERT INTO log_entries (container_id, message, log_level)
+            VALUES (?, ?, ?)
+        """, (container_id, message, log_level))
 
     log_id = cursor.lastrowid
 

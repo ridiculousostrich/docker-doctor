@@ -63,7 +63,8 @@ def collect_logs_from_container(container_name, tail=None):
                 add_log_entry(
                     container_id=container_id,
                     message=parsed['message'],
-                    log_level=parsed['level']
+                    log_level=parsed['level'],
+                    timestamp=parsed.get('timestamp')  # Use extracted timestamp if available
                 )
                 logs_stored += 1
 
