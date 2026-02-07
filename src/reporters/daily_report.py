@@ -29,31 +29,33 @@ def generate_daily_report(date=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Get all summaries for this date
+  # Get all containers with their summaries (including those with no logs)
     cursor.execute("""
         SELECT
             c.name,
-            s.total_logs,
-            s.error_count,
-            s.warning_count,
+            COALESCE(s.total_logs, 0) as total_logs,
+            COALESCE(s.error_count, 0) as error_count,
+            COALESCE(s.warning_count, 0) as warning_count,
             s.ai_summary
-        FROM daily_summaries s
-        JOIN containers c ON s.container_id = c.id
-        WHERE s.date = ?
-        ORDER BY s.error_count DESC, s.warning_count DESC, c.name
+        FROM containers c
+        LEFT JOIN daily_summaries s ON c.id = s.container_id AND s.date = ?
+        ORDER BY
+            COALESCE(s.error_count, 0) DESC,
+            COALESCE(s.warning_count, 0) DESC,
+            c.name
     """, (date,))
 
     summaries = cursor.fetchall()
 
-    # Calculate overall statistics
+   # Calculate overall statistics (count ALL containers, not just those with logs)
     cursor.execute("""
         SELECT
-            COUNT(DISTINCT s.container_id) as container_count,
-            SUM(s.total_logs) as total_logs,
-            SUM(s.error_count) as total_errors,
-            SUM(s.warning_count) as total_warnings
-        FROM daily_summaries s
-        WHERE s.date = ?
+            COUNT(DISTINCT c.id) as container_count,
+            COALESCE(SUM(s.total_logs), 0) as total_logs,
+            COALESCE(SUM(s.error_count), 0) as total_errors,
+            COALESCE(SUM(s.warning_count), 0) as total_warnings
+        FROM containers c
+        LEFT JOIN daily_summaries s ON c.id = s.container_id AND s.date = ?
     """, (date,))
 
     stats = cursor.fetchone()
@@ -114,7 +116,10 @@ def generate_daily_report(date=None):
         report.append("✅ HEALTHY CONTAINERS")
         report.append("-" * 70)
         for name, total, errors, warnings, summary in healthy_containers:
-            report.append(f"✅ {name}: {total} logs")
+            if total == 0:
+                report.append(f"✅ {name}: No activity in 24h")
+            else:
+                report.append(f"✅ {name}: {total} logs")
         report.append("")
 
     report.append("=" * 70)
