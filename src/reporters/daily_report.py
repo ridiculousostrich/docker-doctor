@@ -11,6 +11,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.database.queries import get_connection
+from src.reporters.discord_notifier import send_discord_notification, should_send_notification, load_config
 
 
 def generate_daily_report(date=None):
@@ -21,7 +22,9 @@ def generate_daily_report(date=None):
         date (str): Date in YYYY-MM-DD format (defaults to today)
 
     Returns:
-        str: Formatted report text
+        tuple: (report_text, report_data)
+            - report_text (str): Formatted report text
+            - report_data (dict): Structured data for notifications
     """
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
@@ -29,7 +32,7 @@ def generate_daily_report(date=None):
     conn = get_connection()
     cursor = conn.cursor()
 
-  # Get all containers with their summaries (including those with no logs)
+    # Get all containers with their summaries (including those with no logs)
     cursor.execute("""
         SELECT
             c.name,
@@ -47,7 +50,7 @@ def generate_daily_report(date=None):
 
     summaries = cursor.fetchall()
 
-   # Calculate overall statistics (count ALL containers, not just those with logs)
+    # Calculate overall statistics (count ALL containers, not just those with logs)
     cursor.execute("""
         SELECT
             COUNT(DISTINCT c.id) as container_count,
@@ -126,7 +129,26 @@ def generate_daily_report(date=None):
     report.append(f"Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     report.append("=" * 70)
 
-    return "\n".join(report)
+    report_text = "\n".join(report)
+
+    # Also return structured data for Discord
+    report_data = {
+        'total_containers': stats[0],
+        'total_logs': stats[1],
+        'total_errors': stats[2],
+        'total_warnings': stats[3],
+        'containers_with_errors': containers_with_errors,
+        'problem_containers': [
+            {'name': s[0], 'errors': s[2], 'warnings': s[3]}
+            for s in problem_containers
+        ],
+        'healthy_containers': [
+            {'name': s[0]}
+            for s in healthy_containers
+        ]
+    }
+
+    return report_text, report_data
 
 
 def print_daily_report(date=None):
@@ -135,9 +157,13 @@ def print_daily_report(date=None):
 
     Args:
         date (str): Date in YYYY-MM-DD format (defaults to today)
+
+    Returns:
+        dict: Report data for Discord notifications
     """
-    report = generate_daily_report(date)
-    print(report)
+    report_text, report_data = generate_daily_report(date)
+    print(report_text)
+    return report_data
 
 
 def save_daily_report(filename=None, date=None):
@@ -149,7 +175,7 @@ def save_daily_report(filename=None, date=None):
         date (str): Date in YYYY-MM-DD format (defaults to today)
 
     Returns:
-        Path: Path to saved report file
+        tuple: (report_path, report_data)
     """
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
@@ -160,19 +186,28 @@ def save_daily_report(filename=None, date=None):
     # Save to data directory
     report_path = Path(__file__).parent.parent.parent / "data" / filename
 
-    report = generate_daily_report(date)
+    report_text, report_data = generate_daily_report(date)
 
     with open(report_path, 'w') as f:
-        f.write(report)
+        f.write(report_text)
 
     print(f"Report saved to: {report_path}")
-    return report_path
+    return report_path, report_data
 
 
 if __name__ == "__main__":
-    # Test: Print today's report
-    print_daily_report()
+    # Print today's report
+    report_data = print_daily_report()
 
-    # Also save it to a file
+    # Save it to a file
     print()
     save_daily_report()
+
+    # Send Discord notification if configured
+    print()
+    config = load_config()
+    if config and should_send_notification(report_data, config):
+        print("Sending Discord notification...")
+        send_discord_notification(report_data)
+    else:
+        print("Discord notification not sent (no issues detected or not configured)")

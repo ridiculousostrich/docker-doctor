@@ -2,49 +2,24 @@
 # Copy to config.yaml and customize
 
 docker:
-  # Docker socket location (usually /var/run/docker.sock on Linux)
-  socket: "unix://var/run/docker.sock"
-  
-  # Containers to monitor (empty list = all containers)
+  connection: "tcp://localhost:2375"
   containers: []
-  
-  # How many days of logs to collect per container
   log_days: 1
 
 database:
-  # SQLite database path
   path: "data/logs.db"
 
 ollama:
-  # Ollama API endpoint
-  host: "http://localhost:11434"
-  
-  # Model to use for summarization
-  model: "llama3.2"
-  
-  # Temperature for generation (0.0 = deterministic, 1.0 = creative)
+  host: "http://192.168.1.9:11434"
+  model: "qwen2.5:32b-instruct-q4_K_M"
   temperature: 0.3
 
-email:
-  # SMTP settings
-  smtp_host: "smtp.gmail.com"
-  smtp_port: 587
-  smtp_user: "your-email@gmail.com"
-  smtp_password: "your-app-password"
-  
-  # Email details
-  from_address: "your-email@gmail.com"
-  to_addresses:
-    - "recipient@example.com"
-  
-  subject: "Daily Docker Log Summary - {date}"
+discord:
+  # Discord webhook URL for notifications
+  webhook_url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
 
-monitoring:
-  # Run time (24-hour format)
-  schedule_time: "06:00"
-  
-  # Minimum error count to include in summary
-  error_threshold: 1
-  
-  # Include info-level logs in analysis
-  include_info: false
+  # When to send notifications
+  notify_on_errors: true
+  notify_on_warnings: true
+  warning_threshold: 50
+  always_send_daily: false
