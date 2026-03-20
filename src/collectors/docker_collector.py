@@ -1,43 +1,30 @@
+
 """
 Docker log collector module.
 Retrieves logs from Docker containers.
 """
 
 import docker
+import yaml
+from pathlib import Path
+
+
+def load_config():
+    """Load configuration from config.yaml"""
+    config_path = Path(__file__).parent.parent.parent / "config.yaml"
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    return None
+
 
 def get_docker_client():
-    """Get Docker client configured for SSH tunnel."""
-    return docker.DockerClient(base_url='tcp://localhost:2375')
+    """Get Docker client configured from config.yaml."""
+    config = load_config()
 
-def get_container_logs(container_name, tail=100):
-    """
-    Get recent logs from a Docker container.
+    if config and 'docker' in config:
+        connection = config['docker'].get('connection', 'unix:///var/run/docker.sock')
+        return docker.DockerClient(base_url=connection)
 
-    Args:
-        container_name (str): Name of the container
-        tail (int): Number of recent log lines to retrieve
-
-    Returns:
-        str: Container logs
-    """
-    client = get_docker_client()
-    container = client.containers.get(container_name)
-    logs = container.logs(tail=tail).decode('utf-8')
-    return logs
-
-
-if __name__ == "__main__":
-    # Test code
-    print("Docker Log Collector - Test Mode")
-
-    # Try to list containers
-    try:
-        client = docker.DockerClient(base_url='tcp://localhost:2375')
-        containers = client.containers.list()
-        print(f"\nFound {len(containers)} running containers:")
-        for container in containers:
-            print(f"  - {container.name}")
-    except Exception as e:
-        print(f"\nError connecting to Docker: {e}")
-        print("Make sure Docker is running and accessible.")
-
+    # Default to local socket if no config
+    return docker.from_env()

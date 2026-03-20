@@ -4,23 +4,40 @@ Database query functions for inserting and retrieving data.
 
 import sqlite3
 from datetime import datetime
+
+# Try relative import first (when used as a module)
+# Fall back to absolute import (when run directly)
 try:
-    from .schema import get_database_path
+    from .schema import get_database_path, create_tables
 except ImportError:
-    from schema import get_database_path
+    from schema import get_database_path, create_tables
 
 
 def get_connection():
     """
     Get a connection to the database.
+    Automatically initializes database if it doesn't exist.
 
     Returns:
         sqlite3.Connection: Database connection
     """
     db_path = get_database_path()
+
+    # Check if database exists
+    db_exists = db_path.exists()
+
+    # Connect (will create file if it doesn't exist)
     conn = sqlite3.connect(db_path)
+
+    # If database was just created, initialize tables
+    if not db_exists:
+        print(f"Database not found. Creating new database at {db_path}")
+        create_tables(conn)
+        print("Database initialized successfully")
+
     # Enable foreign key constraints
     conn.execute("PRAGMA foreign_keys = ON")
+
     return conn
 
 
