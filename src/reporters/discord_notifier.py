@@ -21,7 +21,7 @@ def load_config():
     return None
 
 
-def send_discord_notification(report_data):
+def send_discord_notification(report_data, report_file_path=None):
     """
     Send a Discord notification with the daily report.
 
@@ -34,6 +34,7 @@ def send_discord_notification(report_data):
             - containers_with_errors: int
             - problem_containers: list of dicts
             - healthy_containers: list of dicts
+        report_file_path (Path): Optional path to full report text file
     """
     config = load_config()
 
@@ -111,10 +112,23 @@ def send_discord_notification(report_data):
         inline=False
     )
 
+    # Add note about full report
+    if report_file_path:
+        embed.add_embed_field(
+            name="📄 Full Report",
+            value="See attached file for complete analysis with AI summaries and trend data",
+            inline=False
+        )
+
     # Add footer
     embed.set_footer(text=f"Generated at {datetime.now().strftime('%H:%M:%S')}")
 
     webhook.add_embed(embed)
+
+    # Attach the full report file if provided
+    if report_file_path and report_file_path.exists():
+        with open(report_file_path, "rb") as f:
+            webhook.add_file(file=f.read(), filename=report_file_path.name)
 
     # Send it
     response = webhook.execute()
@@ -176,4 +190,11 @@ if __name__ == "__main__":
     }
 
     print("Sending test Discord notification...")
-    send_discord_notification(test_data)
+
+    # Try to attach the most recent report if it exists
+    from pathlib import Path
+    data_dir = Path(__file__).parent.parent.parent / "data"
+    report_files = sorted(data_dir.glob("report_*.txt"), reverse=True)
+    report_path = report_files[0] if report_files else None
+
+    send_discord_notification(test_data, report_path)

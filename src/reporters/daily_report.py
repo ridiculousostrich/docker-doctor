@@ -217,13 +217,13 @@ if __name__ == "__main__":
 
     # Save it to a file
     print()
-    save_daily_report()
+    report_path, _ = save_daily_report()
 
     # Send Discord notification if configured
     print()
     config = load_config()
     if config and should_send_notification(report_data, config):
         print("Sending Discord notification...")
-        send_discord_notification(report_data)
+        send_discord_notification(report_data, report_path)
     else:
         print("Discord notification not sent (no issues detected or not configured)")
