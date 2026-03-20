@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  docker-doctor:
+    image: ridiculousostrich/docker-doctor:latest
+    container_name: docker-doctor
+    restart: unless-stopped
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/docker-doctor/config.yaml:/app/config.yaml:ro
+      - docker-doctor-data:/app/data
+
+    environment:
+      - TZ=America/New_York
+
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  docker-doctor-data:
