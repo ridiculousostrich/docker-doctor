@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.database.queries import get_connection
 from src.reporters.discord_notifier import send_discord_notification, should_send_notification, load_config
+from src.analyzers.trend_analyzer import get_date_comparison, format_trend_summary, get_new_errors
 
 
 def generate_daily_report(date=None):
@@ -64,6 +65,9 @@ def generate_daily_report(date=None):
     stats = cursor.fetchone()
     conn.close()
 
+    # Get trend data for comparison
+    trend_data = get_date_comparison(date)
+
     # Build the report
     report = []
     report.append("=" * 70)
@@ -106,6 +110,18 @@ def generate_daily_report(date=None):
             status = "🔴" if errors > 0 else "🟡"
             report.append(f"{status} {name}")
             report.append(f"   Logs: {total} | Errors: {errors} | Warnings: {warnings}")
+
+            # Add trend information
+            trend_summary = format_trend_summary(name, trend_data)
+            if trend_summary and trend_summary != "No trend data available":
+                report.append(f"   Trend: {trend_summary}")
+
+            # Check for new errors
+            if errors > 0:
+                new_error_list = get_new_errors(name, date)
+                if new_error_list:
+                    report.append(f"   ⚠️  {len(new_error_list)} new error type(s) detected")
+
             if summary:
                 # Wrap the summary text to 66 characters (70 minus the "   Summary: " prefix)
                 wrapped = textwrap.fill(summary, width=66, subsequent_indent="            ")
