@@ -9,6 +9,20 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import subprocess
 import sys
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("/workspace/docker-doctor/logs/scheduler.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+from src.utils.graceful_shutdown import register_shutdown_handler, get_default_cleanup_functions
 
 
 def load_config():
@@ -22,6 +36,7 @@ def load_config():
 
 def run_workflow():
     """Execute the full monitoring workflow."""
+    logger.info("Starting monitoring workflow at %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     print("=" * 70)
     print(f"Starting monitoring workflow at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 70)
@@ -35,19 +50,28 @@ def run_workflow():
     ]
 
     for step_name, command in steps:
+        logger.info("Starting step: %s", step_name)
         print(f"→ {step_name}...")
         print()
         try:
             # Don't capture output - let it stream to console
-            result = subprocess.run(command, check=True)
+            result = subprocess.run(command, check=True, timeout=300)  # 5-minute timeout
+            logger.info("Completed step: %s", step_name)
             print()
             print(f"✓ {step_name} completed")
         except subprocess.CalledProcessError as e:
+            logger.error("Step %s failed with exit code %d", step_name, e.returncode)
             print()
             print(f"✗ {step_name} failed with exit code {e.returncode}")
             return False
+        except subprocess.TimeoutExpired:
+            logger.error("Step %s timed out after 5 minutes", step_name)
+            print()
+            print(f"✗ {step_name} timed out after 5 minutes")
+            return False
         print()
 
+    logger.info("Workflow completed successfully at %s", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     print("=" * 70)
     print(f"Workflow completed successfully at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 70)
@@ -83,6 +107,7 @@ def calculate_next_run(schedule_time):
 
 def main():
     """Main scheduler loop."""
+    logger.info("Docker Doctor scheduler started")
     print("Docker Doctor - Automated Monitoring Scheduler")
     print("=" * 70)
     print()
@@ -99,12 +124,16 @@ def main():
     print()
     run_workflow()
 
+    # Register shutdown handlers
+    register_shutdown_handler(get_default_cleanup_functions())
+
     # Main scheduling loop
     while True:
         # Calculate next run time
         next_run = calculate_next_run(schedule_time)
         sleep_seconds = (next_run - datetime.now()).total_seconds()
 
+        logger.info("Next run scheduled for: %s", next_run.strftime('%Y-%m-%d %H:%M:%S'))
         print(f"Next run scheduled for: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Sleeping for {sleep_seconds / 3600:.1f} hours...")
         print()
@@ -120,8 +149,10 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        logger.info("Scheduler stopped by user")
         print("\nScheduler stopped by user")
         sys.exit(0)
     except Exception as e:
+        logger.exception("Scheduler crashed")
         print(f"\nScheduler crashed: {e}")
         sys.exit(1)

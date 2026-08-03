@@ -1,15 +1,56 @@
 """
-AI-powered log summarization using Ollama.
+AI-powered log summarization using configurable AI providers.
 """
 
 import sys
 from pathlib import Path
-import ollama
+import yaml
+from typing import Dict, Any
+from src.utils.retry import retry_ai_call
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.database.queries import get_connection
+from src.ai import get_ai_provider
+
+
+def load_ai_config() -> Dict[str, Any]:
+    """Load AI configuration from config.yaml, with environment variable override."""
+    config_path = Path(__file__).parent.parent.parent / "config.yaml"
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+    else:
+        config = {}
+    
+    # Override config with environment variables if set
+    import os
+    
+    # AI provider (e.g., ollama, openai, anthropic)
+    if os.getenv('AI_PROVIDER'):
+        config['ai'] = config.get('ai', {})
+        config['ai']['provider'] = os.getenv('AI_PROVIDER')
+    
+    # AI host endpoint
+    if os.getenv('AI_HOST'):
+        config['ai'] = config.get('ai', {})
+        config['ai']['host'] = os.getenv('AI_HOST')
+    
+    # AI model name
+    if os.getenv('AI_MODEL'):
+        config['ai'] = config.get('ai', {})
+        config['ai']['model'] = os.getenv('AI_MODEL')
+    
+    # AI temperature
+    if os.getenv('AI_TEMPERATURE'):
+        config['ai'] = config.get('ai', {})
+        try:
+            config['ai']['temperature'] = float(os.getenv('AI_TEMPERATURE'))
+        except ValueError:
+            pass  # Keep default if invalid
+    
+    return config.get('ai', {})
 
 
 def get_container_logs_for_analysis(container_id, date, max_logs=50):
@@ -59,9 +100,10 @@ def get_container_logs_for_analysis(container_id, date, max_logs=50):
     }
 
 
+@retry_ai_call
 def generate_ai_summary(container_name, logs_data, total_logs, error_count, warning_count):
     """
-    Generate an AI summary using Ollama.
+    Generate an AI summary using the configured AI provider.
 
     Args:
         container_name (str): Name of the container
@@ -73,7 +115,7 @@ def generate_ai_summary(container_name, logs_data, total_logs, error_count, warn
     Returns:
         str: AI-generated summary
     """
-    # Build the prompt for Ollama
+    # Build the prompt for AI provider
     prompt = f"""Analyze these Docker container logs and provide a brief summary.
 
 Container: {container_name}
@@ -113,17 +155,11 @@ Key question: Is the SERVICE actually impaired, or just handling normal internet
 Format: Write 2-3 sentences of plain text. No bullet points, no markdown headers, no special formatting."""
 
     try:
-        # Call Ollama API
-        client = ollama.Client(host='http://192.168.1.9:11434')
-        response = client.chat(
-            model='qwen2.5:32b-instruct-q4_K_M',
-            messages=[{
-                'role': 'user',
-                'content': prompt
-            }]
-        )
-
-        summary = response['message']['content'].strip()
+        # Use the configured AI provider
+        ai_config = load_ai_config()
+        ai_provider = get_ai_provider(ai_config)
+        
+        summary = ai_provider.generate_summary(prompt)
         return summary
 
     except Exception as e:

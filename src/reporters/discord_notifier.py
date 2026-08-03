@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from datetime import datetime
+from src.utils.retry import retry_discord_call
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -21,6 +22,7 @@ def load_config():
     return None
 
 
+@retry_discord_call
 def send_discord_notification(report_data, report_file_path=None):
     """
     Send a Discord notification with the daily report.

@@ -15,10 +15,10 @@ venv/
 env/
 ENV/
 
-# Data (will be mounted as volume)
-data/
-*.db
-*.sqlite
+# Data
+# data/  # Removed this line to allow data directory in build context
+# *.db   # Removed this line to allow database file in build context
+# *.sqlite  # Removed this line to allow sqlite files in build context
 
 # Config with secrets (will be mounted)
 config.yaml

@@ -1,0 +1,53 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [1.0.0] - 2026-08-01
+
+### Added
+
+- Full project documentation: `README.md`, `DEPLOYMENT.md`, `config.schema.json`, `LICENSE`
+- Comprehensive test suite across all core components (`tests/` directory)
+- Systemd service file and automated install script (`install.sh`)
+- Prometheus `/metrics` endpoint for monitoring metrics
+- HTML health history dashboard using Chart.js
+- Automatic SQLite daily backups with retention
+- Container image update notifications via Discord
+- Configurable container monitoring via `containers` list in `config.yaml`
+- REST API endpoints for querying monitoring data
+- Exponential backoff retry logic for AI calls and Discord notifications
+- GitHub Actions CI/CD pipeline for automated builds and tests
+- Multi-provider AI support (Ollama, OpenAI, Anthropic)
+- Versioning policy (SemVer) and release branching strategy
+
+### Changed
+
+- Modular architecture with clear component separation
+- Config validation using `config.schema.json`
+- Daily report generation with health indicators (🟢🟡🔴)
+- Trend analysis comparing today’s data with yesterday’s metrics
+
+### Fixed
+
+- Noise filtering in log collection (e.g., "context canceled" messages)
+- Error classification into categories (network, authentication, storage, etc.)
+- Graceful shutdown handling and timeout management
+
+### Removed
+
+- None
+
+[Unreleased]: https://github.com/ridiculousostrich/docker-doctor/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ridiculousostrich/docker-doctor/compare/v1.0.0...HEAD

@@ -1,0 +1,30 @@
+# Docker Doctor Service
+
+[Unit]
+Description=Docker Doctor - Automated Monitoring System
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/workspace/docker-doctor
+ExecStart=/usr/bin/python3 src/scheduler.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/workspace/docker-doctor/logs/scheduler.log
+StandardError=append:/workspace/docker-doctor/logs/scheduler.log
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

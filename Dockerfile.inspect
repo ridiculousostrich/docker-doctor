@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Install Python dependencies
+# Install base dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Add optional AI provider dependencies based on environment variable
@@ -37,36 +38,26 @@ COPY config.example.yaml .
 # Create data directory
 RUN mkdir -p /app/data
 
-# Copy the database file (historically named logs.db)
-COPY data/logs.db /app/data/docker-doctor.db
-
 # Set Python path
 ENV PYTHONPATH=/app
 
-# Copy the Flask API server code and its requirements
+# Copy Flask API server code
 COPY backend/api/app.py /app/backend/api/app.py
-COPY backend/api/requirements.txt /app/backend/api/requirements.txt
 
-# Install Flask API dependencies (separate layer for caching)
-RUN pip install --no-cache-dir -r /app/backend/api/requirements.txt
-
-# Copy frontend source for build step
-COPY frontend/package.json frontend/package-lock.json ./frontend/
-COPY frontend/tsconfig.json frontend/
-COPY frontend/public ./frontend/public/
-COPY frontend/src ./frontend/src/
-
-# Build the React frontend for production
+# Build React frontend
+COPY frontend/ /app/frontend
 WORKDIR /app/frontend
-RUN npm install --legacy-peer-deps && npm run build
+RUN npm install && npm run build
 
-# Copy built frontend assets and startup scripts to app root
-WORKDIR /app
-COPY docker-run.sh /app/docker-run.sh
-RUN chmod +x /app/docker-run.sh
+# Copy the built frontend to a public directory
+RUN mkdir -p /app/public && cp -r /app/frontend/build/* /app/public/
 
-# Expose port for the API/server (Flask serves both API + static frontend)
+# Copy the run script
+COPY backend/api/run.sh /app/backend/api/run.sh
+RUN chmod +x /app/backend/api/run.sh
+
+# Expose ports
+EXPOSE 8585
 EXPOSE 8586
 
-# Default command
-CMD ["/app/docker-run.sh"]
+# We're not setting CMD here so we can inspect the image

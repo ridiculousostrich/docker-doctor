@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Docker Doctor Configuration Schema",
+  "description": "JSON Schema for Docker Doctor config.yaml file",
+  "type": "object",
+  "required": [
+    "docker",
+    "database",
+    "ai",
+    "discord"
+  ],
+  "properties": {
+    "docker": {
+      "type": "object",
+      "required": [
+        "connection",
+        "log_days"
+      ],
+      "properties": {
+        "connection": {
+          "type": "string",
+          "description": "Docker daemon connection string (unix socket or TCP endpoint)",
+          "pattern": "^(unix://|tcp://).*",
+          "examples": [
+            "unix:///var/run/docker.sock",
+            "tcp://localhost:2375"
+          ]
+        },
+        "containers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of container names to monitor (empty = monitor all)",
+          "default": []
+        },
+        "log_days": {
+          "type": "integer",
+          "description": "Number of days of logs to analyze (1-7)",
+          "minimum": 1,
+          "maximum": 7,
+          "default": 1
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to SQLite database file",
+          "pattern": ".+\\.db$",
+          "examples": [
+            "data/docker_doctor.db"
+          ]
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "required": [
+        "provider",
+        "host",
+        "model"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "AI provider to use (ollama, openai, anthropic)",
+          "enum": [
+            "ollama",
+            "openai",
+            "anthropic"
+          ],
+          "default": "ollama"
+        },
+        "host": {
+          "type": "string",
+          "description": "AI service endpoint URL",
+          "format": "uri",
+          "examples": [
+            "http://host.docker.internal:11434",
+            "https://api.openai.com/v1",
+            "https://api.anthropic.com/v1"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "description": "AI model name to use for summarization",
+          "examples": [
+            "qwen2.5:32b-instruct-q4_K_M",
+            "gpt-4-turbo",
+            "claude-3-sonnet"
+          ]
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Creativity level for AI summaries (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.3
+        },
+        "max_tokens": {
+          "type": "integer",
+          "description": "Maximum tokens in output summary",
+          "minimum": 100,
+          "maximum": 2000,
+          "default": 1000
+        }
+      }
+    },
+    "discord": {
+      "type": "object",
+      "required": [
+        "webhook_url"
+      ],
+      "properties": {
+        "webhook_url": {
+          "type": "string",
+          "description": "Discord webhook URL for notifications",
+          "format": "uri",
+          "pattern": "https://discord.com/api/webhooks/[-_0-9a-zA-Z]+/[-_0-9a-zA-Z]+"
+        },
+        "notify_on_errors": {
+          "type": "boolean",
+          "description": "Send notifications when errors detected",
+          "default": true
+        },
+        "notify_on_warnings": {
+          "type": "boolean",
+          "description": "Send notifications when warnings detected",
+          "default": true
+        },
+        "warning_threshold": {
+          "type": "integer",
+          "description": "Number of warnings before sending notification",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 50
+        },
+        "always_send_daily": {
+          "type": "boolean",
+          "description": "Send daily report even when no issues found",
+          "default": false
+        }
+      }
+    }
+  }
+}
