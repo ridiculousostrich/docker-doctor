@@ -7,8 +7,8 @@ function Dashboard() {
   const [error, setError] = useState(null);
 
   const API_BASE = window.location.hostname === 'localhost'
-    ? 'http://localhost:8586'
-    : `http://${window.location.hostname}:8586`;
+    ? `${window.location.protocol}//${window.location.hostname}:8586`
+    : `${window.location.protocol}//${window.location.hostname}:8586`;
 
   useEffect(() => {
     fetch(`${API_BASE}/api/stats`)

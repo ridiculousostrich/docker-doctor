@@ -4,8 +4,9 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies  
 RUN apt-get update && apt-get install -y \
+    curl \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
@@ -18,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Add optional AI provider dependencies based on environment variable
 # This allows us to conditionally install providers without bloating the base image
-ARG AI_PROVIDER=ollama
+ARG AI_PROVIDER=openai
 RUN if [ "$AI_PROVIDER" = "openai" ]; then \
         pip install --no-cache-dir openai; \
     elif [ "$AI_PROVIDER" = "anthropic" ]; then \
@@ -35,8 +36,6 @@ COPY config.example.yaml .
 
 # Create data directory
 RUN mkdir -p /app/data
-
-
 
 # Set Python path
 ENV PYTHONPATH=/app
@@ -66,5 +65,5 @@ RUN chmod +x /app/docker-run.sh
 # Expose port for the API/server (Flask serves both API + static frontend)
 EXPOSE 8586
 
-# Default command
+# Default command - single CMD (removed duplicate)
 CMD ["/app/docker-run.sh"]

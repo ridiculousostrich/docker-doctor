@@ -3,8 +3,8 @@ import './DashboardApp.css';
 
 // API base URL - same host, different port (Flask serves API on 8586, static on 8585)
 const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:8586'
-  : `http://${window.location.hostname}:8586`;
+  ? `${window.location.protocol}//${window.location.hostname}:8586`
+  : `${window.location.protocol}//${window.location.hostname}:8586`;
 
 function DashboardApp() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -36,8 +36,8 @@ function DashboardApp() {
         setNewErrors(errorsData);
       } catch (err) {
         setError(err.message);
-        // Load mock data as fallback
-        loadMockData();
+        // Remove mock data fallback - let the error be visible to the user
+        return;
       } finally {
         setLoading(false);
       }
@@ -375,8 +375,8 @@ function ReportsTab({ stats }) {
         <h2>System Configuration</h2>
         <div className="config-info">
           <p><strong>Database:</strong> data/logs.db</p>
-          <p><strong>API Endpoint:</strong> http://localhost:8586/api</p>
-          <p><strong>Dashboard Port:</strong> 8585</p>
+          <p><strong>API Endpoint:</strong> {window.location.protocol}//{window.location.hostname}:8586/api</p>
+          <p><strong>Dashboard Port:</strong> 8586</p>
           <p><strong>Last Update:</strong> {stats?.date || 'N/A'}</p>
         </div>
       </div>

@@ -6,9 +6,11 @@ Reads from the SQLite database at data/logs.db.
 """
 
 import sys
+import sys
 import os
 from pathlib import Path
 from datetime import datetime, timedelta
+import yaml
 
 # Add the project root to sys.path so we can import from src/
 PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
@@ -19,8 +21,24 @@ from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder=str(PROJECT_ROOT / "frontend" / "build"), static_url_path="")
 
-# Database path - use logs.db which has real data
-DB_PATH = PROJECT_ROOT / "data" / "logs.db"
+# Load configuration
+def load_config():
+    """Load configuration from config.yaml"""
+    config_path = Path(__file__).parent.parent.parent / "config.yaml"
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            return yaml.safe_load(f)
+    return {}
+
+# Get configuration
+config = load_config()
+
+# Database path - check if configured, use default if not
+if 'database' in config and 'path' in config['database']:
+    DB_PATH = Path(config['database']['path'])
+else:
+    # Default fallback
+    DB_PATH = PROJECT_ROOT / "data" / "logs.db"
 
 
 def get_db():
