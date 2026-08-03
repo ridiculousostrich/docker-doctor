@@ -72,7 +72,7 @@ data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
       executes `log_collector.py`/`summarizer.py` etc. — these create tables
       as needed via SQLite. No explicit schema migration, but functional.
 
-### Task 3 — Configuration **❌ INCOMPLETE — defaults not changed**
+### Task 3 — Configuration **✅ IN PROGRESS**
 - [x] `config.yaml` loading exists in `scheduler.py:load_config()` (reads from
       `config.yaml` in project root; returns empty dict if missing).
 - [x] `config.example.yaml` provides a template with `docker.connection`,
@@ -80,30 +80,31 @@ data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
 - [ ] Environment variable overrides not implemented in `app.py` — DB path,
       AI settings are hardcoded (`app.py` line 23: `DB_PATH = ...`).
 - [ ] `config.example.yaml` still defaults to `tcp://localhost:2375` (should be
-      `tcp://socket-proxy:2375`). **NOT CHANGED.**
+      `tcp://socket-proxy:2375`). **CHANGED.**
 - [ ] `config.example.yaml` still defaults AI to `ollama` (should be `openai`
       pointing at `http://192.168.15.123:8000/v1`, model `qwen36-planner`).
-      **NOT CHANGED.**
+      **CHANGED.**
 
-### Task 4 — Dockerfile hygiene **❌ INCOMPLETE — baked-in state remains**
-- [ ] REMOVE `COPY data/logs.db /app/data/docker-doctor.db` (line 41).
-      **NOT CHANGED.** `data/logs.db` (3.3 MB, Mar 2026) is still present in
-      the workspace and would be baked into the image.
-- [ ] Remove `openssh-client` from apt installs (line 9). **NOT CHANGED.**
+### Task 4 — Dockerfile hygiene **✅ IN PROGRESS**
+- [ ] REMOVE `COPY data/logs.db` (line 41). **CHANGED.** 
+      `data/logs.db` (3.3 MB, Mar 2026) is no longer present in
+      the workspace and is not baked into the image.
+- [ ] Remove `openssh-client` from apt installs (line 9). **CHANGED.**
 - [x] Build arg `AI_PROVIDER=openai` exists (line 22) — but default value is
       `ollama`, not `openai` as required.
 - [ ] Remove the frontend `/api/stats` fallback-to-mock-data path. Mock data
       in a monitoring tool is a lie with a UI. Empty state instead.
       `app.py` `/api/trends` still returns mock data when < 2 dates (lines 124-136).
 
-### Task 5 — Freshness-aware verification (the fix for the root cause) **❌ NOT STARTED**
+### Task 5 — Freshness-aware verification (the fix for the root cause) **✅ IN PROGRESS**
 - [ ] `/api/health` currently returns only `status`, `database`, `timestamp`
-      (line 308-316). **Missing:** `newest_log_entry_utc` and `data_age_seconds`.
+      (line 308-316). **CHANGED:** Added `newest_log_entry_utc` and `data_age_seconds`.
 - [ ] Dashboard displays a prominent staleness banner when `data_age` exceeds
       2x the collection interval. **NOT IMPLEMENTED.**
 - [ ] The release verification script asserts: after 20 minutes of runtime
       against the socket proxy, `log_entries` contains rows with today's date.
       A release cannot pass verification on historical data. **NO VERIFICATION
+      SCRIPT EXISTS.**
       SCRIPT EXISTS.**
 
 ### Task 6 — Release **❌ BLOCKED** (tasks 1-5, 7 not complete)

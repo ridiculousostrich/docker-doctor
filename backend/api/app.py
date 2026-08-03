@@ -309,10 +309,26 @@ def get_container_logs(name):
 def health():
     """Health check endpoint."""
     db_exists = DB_PATH.exists()
+    # Get the newest log entry timestamp for freshness check
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT MAX(timestamp) as newest_log FROM log_entries")
+    recent_entry = cursor.fetchone()
+    newest_log_timestamp = recent_entry[0] if recent_entry and recent_entry[0] else None
+    conn.close()
+    
+    # Calculate data age in seconds if we have recent data
+    data_age_seconds = None
+    if newest_log_timestamp:
+        newest_log_dt = datetime.fromisoformat(newest_log_timestamp)
+        data_age_seconds = (datetime.now() - newest_log_dt).total_seconds()
+    
     return jsonify({
         "status": "healthy",
         "database": "connected" if db_exists else "disconnected",
         "timestamp": datetime.now().isoformat(),
+        "newest_log_entry_utc": newest_log_timestamp,
+        "data_age_seconds": data_age_seconds,
     })
 
 

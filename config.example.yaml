@@ -2,7 +2,7 @@
 # Copy to config.yaml and customize
 
 docker:
-  connection: "tcp://localhost:2375"
+  connection: "tcp://socket-proxy:2375"
   containers: []
   log_days: 1
 
@@ -10,9 +10,9 @@ database:
   path: "data/logs.db"
 
 ai:
-  provider: "ollama"
-  host: "http://192.168.1.9:11434"
-  model: "qwen2.5:32b-instruct-q4_K_M"
+  provider: "openai"
+  host: "http://192.168.15.123:8000/v1"
+  model: "qwen36-planner"
   temperature: 0.3
 
 discord:

@@ -3,6 +3,26 @@ set -e
 
 echo "Starting Docker Doctor (production mode)..."
 
-# Start Flask API server (port 8586) and serve React on port 8585
+# Ensure config directory exists
+mkdir -p /app/config
+
+# Start both Flask API server and scheduler as supervised processes
 cd /app
-exec python backend/api/app.py
+
+# Verify config file exists or use defaults
+if [ -f "/app/config.yaml" ]; then
+    echo "Using mounted config.yaml"
+else
+    echo "No mounted config.yaml found, using defaults"
+fi
+
+# Start Flask API server (port 8586)
+echo "Starting Flask API server..."
+python backend/api/app.py &
+
+# Start the scheduler
+echo "Starting Docker Doctor scheduler..."
+python src/scheduler.py &
+
+# Wait for both processes to complete
+wait

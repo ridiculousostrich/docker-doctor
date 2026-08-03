@@ -6,7 +6,6 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    openssh-client \
     nodejs \
     npm \
     && rm -rf /var/lib/apt/lists/*
@@ -37,8 +36,7 @@ COPY config.example.yaml .
 # Create data directory
 RUN mkdir -p /app/data
 
-# Copy the database file (historically named logs.db)
-COPY data/logs.db /app/data/docker-doctor.db
+
 
 # Set Python path
 ENV PYTHONPATH=/app
