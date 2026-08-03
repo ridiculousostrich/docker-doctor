@@ -122,18 +122,13 @@ Deployment surfaced a release-process failure: the Docker Hub repo held THREE
 divergent images (`latest` = Feb 2026 build, `v1.1` = broken split-port build
 serving uncompiled React source, `v1.1.1` = the LXC-verified build). The
 "verified" artifact and the "pushed" artifact were not the same bits.
-### Task 7 — Release integrity (added 2026-08-02 after production deploy)
-Deployment surfaced a release-process failure: the Docker Hub repo held THREE
-divergent images (`latest` = Feb 2026 build, `v1.1` = broken split-port build
-serving uncompiled React source, `v1.1.1` = the LXC-verified build). The
-"verified" artifact and the "pushed" artifact were not the same bits.
 - [x] Find hardcoded frontend strings (verified by `search_files`):
   | File | Line | Content |
   |------|------|---------|
   | `frontend/src/Dashboard.js` | 10 | `'http://localhost:8586'` |
   | `frontend/src/DashboardApp.js` | 4 | comment "Flask serves API on 8586, static on 8585" |
   | `frontend/src/DashboardApp.js` | 6 | `'http://localhost:8586'` |
-  | `frontend/src/DashboardApp.js` | 378 | `<strong>API Endpoint:</strong> http://localhost:8586/api` |
+  | `frontend/src/DashboardApp.js`  | 378 | `<strong>API Endpoint:</strong> http://localhost:8586/api` |
   | `frontend/src/DashboardApp.js` | 379 | `<strong>Dashboard Port:</strong> 8585`|
 - [x] Fix hardcoded frontend strings: API base URL must be relative (same-origin);
       displayed URLs derive from `window.location`. Dashboard port `8585` is
