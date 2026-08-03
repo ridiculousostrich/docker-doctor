@@ -136,7 +136,6 @@ serving uncompiled React source, `v1.1.1` = the LXC-verified build). The
       **FRONTEND NOW USES window.location for API base instead of hardcoded**
 
 ### Version 1.2 Progress Summary (verified 2026-08-03)
-### Version 1.2 Progress Summary (verified 2026-08-03)
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1 | Source control | ✅ COMPLETE | Git committed (`1462fe7`), NOT pushed to remote |
