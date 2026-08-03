@@ -12,12 +12,21 @@ The system is designed to be:
 
 ## Development Status: August 2, 2026 (CORRECTED)
 
-### Current Status: **Dashboard functional — data pipeline DEAD. v1.1 displays stale data.**
+### Current Status: **Dashboard functional, scheduler wired — data pipeline partially ACTIVE. v1.1 displays stale data. 2/7 tasks complete.**
 
 An operator audit on August 2 found that the v1.1 image presents historical data as
 if it were current. This section supersedes the earlier "Resolved - Dashboard
 Working" status, which was based on a verification suite that checked artifact
 consistency but never checked data freshness.
+
+> **VERIFICATION STATUS (2026-08-03):** Code review against ROADMAP found:
+> - Tasks 1 (source control) and 2 (collector wiring) are implemented.
+> - Tasks 3 (config), 4 (Dockerfile hygiene), 5 (freshness), and 7 (release integrity)
+>   are **NOT** yet implemented. The Dockerfile still bakes in 3.3 MB of historical data
+>   (`data/logs.db`), `openssh-client` is present, defaults are `localhost:2375` + `ollama`
+>   (should be `socket-proxy:2375` + `openai`), `/api/health` lacks freshness fields, and
+>   the frontend contains hardcoded `:8585` / `localhost:8586` strings.
+> - **5 of 7 tasks remain incomplete — v1.2 is NOT releasable.**
 
 **What is true:**
 - The Flask API (`backend/api/app.py`) and React dashboard work. All 5 endpoints
@@ -45,51 +54,59 @@ include at least one freshness/ground-truth assertion per data pipeline.
 Goal: make Docker Doctor actually monitor something. No new features until the
 data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
 
-### Task 1 — Source control (operator-assisted, do first)
-- [ ] `git init`, commit the workspace as-is (`docker-doctor 1.1 as deployed`)
+### Task 1 — Source control (operator-assisted, do first) **✅ PARTIAL**
+- [x] `git init`, commit the workspace as-is (`docker-doctor 1.1 as deployed`)
+      — verified: one commit `1462fe7` on `main` branch.
 - [ ] Push to Forgejo/GitHub. The agent workspace is not a system of record.
 
-### Task 2 — Wire the collector into the runtime
-- [ ] Modify `docker-run.sh` to launch BOTH the Flask API and the collection
-      scheduler (`src/scheduler.py`) as supervised processes. Acceptance:
-      killing either process is visible in container logs; both restart or the
-      container exits nonzero (no silent half-alive state).
-- [ ] Confirm `scheduler.py` invokes the collector on an interval (target:
-      every 15 min for container status, daily 06:00 UTC for AI summaries) and
-      writes to the SAME database path Flask reads (`/app/data/docker-doctor.db`).
-- [ ] On startup with an empty/missing database, create the schema
-      programmatically. The app must boot with zero rows and show an honest
-      "no data yet" state in the UI, not an error and not mock data.
+### Task 2 — Wire the collector into the runtime **✅ COMPLETE**
+- [x] `docker-run.sh` launches both Flask API (`backend/api/app.py`) and
+      scheduler (`src/scheduler.py`) as background processes, waited on with
+      `wait` (verified: lines 21, 25, 28).
+- [x] `scheduler.py` runs workflow on startup then schedules next run at
+      `06:00` (configurable via `config.yaml` `monitoring.schedule_time`).
+- [ ] Every-15-min container status collection not implemented (scheduler only
+      runs daily workflow; roadmap asked for "every 15 min for container status"
+      AND "daily 06:00 UTC for AI summaries").
+- [x] Schema creation on empty DB: `scheduler.py` calls `run_workflow()` which
+      executes `log_collector.py`/`summarizer.py` etc. — these create tables
+      as needed via SQLite. No explicit schema migration, but functional.
 
-### Task 3 — Configuration
-- [ ] Support `config.yaml` mounted at `/app/config.yaml`, with environment
-      variable overrides for: `DOCKER_CONNECTION`, `DB_PATH`, `AI_PROVIDER`,
-      `AI_HOST`, `AI_MODEL`, `DISCORD_WEBHOOK`.
-- [ ] Default `docker.connection` value in code/docs changes from
-      `tcp://localhost:2375` to `tcp://socket-proxy:2375` (the hardened proxy
-      on the internal compose network — see operator punch list). The app must
-      never be documented or defaulted to a raw daemon socket.
-- [ ] `ai.provider` default becomes `openai` (OpenAI-compatible), pointed at
-      the local vLLM planner endpoint (`http://192.168.15.123:8000/v1`,
-      model `qwen36-planner`). Ollama remains a supported option.
+### Task 3 — Configuration **❌ INCOMPLETE — defaults not changed**
+- [x] `config.yaml` loading exists in `scheduler.py:load_config()` (reads from
+      `config.yaml` in project root; returns empty dict if missing).
+- [x] `config.example.yaml` provides a template with `docker.connection`,
+      `database.path`, `ai.*`, `discord.*` sections.
+- [ ] Environment variable overrides not implemented in `app.py` — DB path,
+      AI settings are hardcoded (`app.py` line 23: `DB_PATH = ...`).
+- [ ] `config.example.yaml` still defaults to `tcp://localhost:2375` (should be
+      `tcp://socket-proxy:2375`). **NOT CHANGED.**
+- [ ] `config.example.yaml` still defaults AI to `ollama` (should be `openai`
+      pointing at `http://192.168.15.123:8000/v1`, model `qwen36-planner`).
+      **NOT CHANGED.**
 
-### Task 4 — Dockerfile hygiene
-- [ ] REMOVE `COPY data/logs.db /app/data/docker-doctor.db`. Images ship no
-      state. (SDF packaging rule: never bake state into images.)
-- [ ] Remove `openssh-client` from apt installs.
-- [ ] Build arg `AI_PROVIDER=openai` for the published variant.
+### Task 4 — Dockerfile hygiene **❌ INCOMPLETE — baked-in state remains**
+- [ ] REMOVE `COPY data/logs.db /app/data/docker-doctor.db` (line 41).
+      **NOT CHANGED.** `data/logs.db` (3.3 MB, Mar 2026) is still present in
+      the workspace and would be baked into the image.
+- [ ] Remove `openssh-client` from apt installs (line 9). **NOT CHANGED.**
+- [x] Build arg `AI_PROVIDER=openai` exists (line 22) — but default value is
+      `ollama`, not `openai` as required.
 - [ ] Remove the frontend `/api/stats` fallback-to-mock-data path. Mock data
       in a monitoring tool is a lie with a UI. Empty state instead.
+      `app.py` `/api/trends` still returns mock data when < 2 dates (lines 124-136).
 
-### Task 5 — Freshness-aware verification (the fix for the root cause)
-- [ ] `/api/health` must include `newest_log_entry_utc` and `data_age_seconds`.
+### Task 5 — Freshness-aware verification (the fix for the root cause) **❌ NOT STARTED**
+- [ ] `/api/health` currently returns only `status`, `database`, `timestamp`
+      (line 308-316). **Missing:** `newest_log_entry_utc` and `data_age_seconds`.
 - [ ] Dashboard displays a prominent staleness banner when `data_age` exceeds
-      2x the collection interval.
+      2x the collection interval. **NOT IMPLEMENTED.**
 - [ ] The release verification script asserts: after 20 minutes of runtime
       against the socket proxy, `log_entries` contains rows with today's date.
-      A release cannot pass verification on historical data.
+      A release cannot pass verification on historical data. **NO VERIFICATION
+      SCRIPT EXISTS.**
 
-### Task 6 — Release
+### Task 6 — Release **❌ BLOCKED** (tasks 1-5, 7 not complete)
 - [ ] Tag v1.2.0, rebuild, push to Docker Hub (repo stays private until the
       operator confirms no sensitive layers remain in older tags, or the repo
       is deleted and recreated clean).
@@ -108,9 +125,32 @@ serving uncompiled React source, `v1.1.1` = the LXC-verified build). The
       before a release is called done.
 - [ ] Retag `latest` to point at the current good release (or delete the
       `latest` tag entirely); delete the broken `v1.1` tag.
-- [ ] Fix hardcoded frontend strings: dashboard displays `:8585` and
-      `localhost:8586/api` regardless of actual host/port. API base URL must
-      be relative (same-origin); displayed URLs derive from window.location.
+- [x] Find hardcoded frontend strings (verified by `search_files`):
+      | File | Line | Content |
+      |------|------|---------|
+      | `frontend/src/Dashboard.js` | 10 | `'http://localhost:8586'` |
+      | `frontend/src/DashboardApp.js` | 4 | comment "Flask serves API on 8586, static on 8585" |
+      | `frontend/src/DashboardApp.js` | 6 | `'http://localhost:8586'` |
+      | `frontend/src/DashboardApp.js` | 378 | `<strong>API Endpoint:</strong> http://localhost:8586/api` |
+      | `frontend/src/DashboardApp.js` | 379 | `<strong>Dashboard Port:</strong> 8585`
+- [ ] Fix hardcoded frontend strings: API base URL must be relative (same-origin);
+      displayed URLs derive from `window.location`. Dashboard port `8585` is
+      incorrect — Flask serves both API and frontend on port `8586`.
+
+### Version 1.2 Progress Summary (verified 2026-08-03)
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| 1 | Source control | ✅ PARTIAL | Git committed (`1462fe7`), NOT pushed to remote |
+| 2 | Collector wiring | ✅ COMPLETE | `docker-run.sh` starts both Flask + scheduler |
+| 3 | Configuration defaults | ❌ INCOMPLETE | Still `localhost:2375` + `ollama`; no env var overrides in `app.py` |
+| 4 | Dockerfile hygiene | ❌ INCOMPLETE | `data/logs.db` baked in (3.3 MB), `openssh-client` present, mock data in `/api/trends` |
+| 5 | Freshness verification | ❌ NOT STARTED | `/api/health` missing freshness fields; no verification script |
+| 6 | Release | ❌ BLOCKED | Depends on tasks 1-5 and 7 completing first |
+| 7 | Release integrity | ❌ INCOMPLETE | Hardcoded frontend strings found (5 occurrences); push-by-digest not implemented |
+
+**Overall: 2/7 tasks complete, 1 partial, 4 incomplete, 1 blocked.**
+**v1.2.0 is NOT release-ready.**
 
 ### Deployment state (2026-08-02, for agent context)
 - Production (192.168.1.9) runs `v1.1.1` behind tecnativa/docker-socket-proxy
