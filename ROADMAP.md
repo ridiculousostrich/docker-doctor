@@ -56,7 +56,7 @@ data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
 
 ### Task 1 — Source control (operator-assisted, do first) **✅ PARTIAL**
 - [x] `git init`, commit the workspace as-is (`docker-doctor 1.1 as deployed`)
-      — verified: one commit `1462fe7` on `main` branch.
+      — verified: commit `1462fe7` exists.
 - [ ] Push to Forgejo/GitHub. The agent workspace is not a system of record.
 
 ### Task 2 — Wire the collector into the runtime **✅ COMPLETE**
