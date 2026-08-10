@@ -19,14 +19,11 @@ if it were current. This section supersedes the earlier "Resolved - Dashboard
 Working" status, which was based on a verification suite that checked artifact
 consistency but never checked data freshness.
 
-> **VERIFICATION STATUS (2026-08-03):** Code review against ROADMAP found:
-> - Tasks 1 (source control) and 2 (collector wiring) are implemented.
-> - Tasks 3 (config), 4 (Dockerfile hygiene), 5 (freshness), and 7 (release integrity)
->   are **NOT** yet implemented. The Dockerfile still bakes in 3.3 MB of historical data
->   (`data/logs.db`), `openssh-client` is present, defaults are `localhost:2375` + `ollama`
->   (should be `socket-proxy:2375` + `openai`), `/api/health` lacks freshness fields, and
->   the frontend contains hardcoded `:8585` / `localhost:8586` strings.
-> - **5 of 7 tasks remain incomplete — v1.2 is NOT releasable.**
+> **VERIFICATION STATUS (2026-08-10):** Independent code audit found:
+> - Tasks 1-2 are fully implemented.
+> - Tasks 3, 4, 5, and 7 are **PARTIALLY** implemented — each has one or more unfulfilled sub-items (see per-task breakdown below).
+> - Task 6 (Release) is correctly marked BLOCKED.
+> - **Only 2 of 7 tasks are fully complete. The remaining 5 need fixes before v1.2 ships.**
 
 **What is true:**
 - The Flask API (`backend/api/app.py`) and React dashboard work. All 5 endpoints
@@ -74,39 +71,27 @@ data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
       executes `log_collector.py`/`summarizer.py` etc. — these create tables
       as needed via SQLite. No explicit schema migration, but functional.
 
-### Task 3 — Configuration **✅ COMPLETE**
-- [x] `config.yaml` loading exists in `scheduler.py:load_config()` (reads from
-      `config.yaml` in project root; returns empty dict if missing).
-- [x] `config.example.yaml` provides a template with `docker.connection`,
-      `database.path`, `ai.*`, `discord.*` sections.
-- [x] Environment variable overrides not implemented in `app.py` — DB path,
-      AI settings are hardcoded (`app.py` line 23: `DB_PATH = ...`). **FIXED**
-- [x] `config.example.yaml` now defaults to `tcp://socket-proxy:2375` (was `localhost:2375`).
-- [x] `config.example.yaml` now defaults AI to `openai` (was `ollama`
-      pointing at `http://192.168.1.9:11434`, model `qwen2.5:32b-instruct-q4_K_M`).
-      **CHANGED.** Uses `http://192.168.15.123:8000/v1` with model `qwen36-planner`.
+### Task 3 — Configuration **⚠ PARTIAL** (verified 2026-08-10)
+- [x] `config.yaml` loading exists in `scheduler.py:load_config()` — verified.
+- [x] `config.example.yaml` provides a template — verified.
+- [~] Environment variable overrides — **PARTIALLY FIXED.** `API_PORT` reads from env (line 364). But `DB_PATH` has NO env override — it falls back to hardcoded `data/logs.db`. No env vars for AI settings or Discord webhook.
+- [ ] `config.example.yaml` default connection **NOT updated** — still shows `tcp://192.168.1.9:2375`, NOT `tcp://socket-proxy:2375` as claimed.
+- [x] AI provider defaults to `openai` in config.example.yaml — verified.
+- [ ] `config.schema.json` line 75 still has `"default": "ollama"` for AI provider — should be `"openai"` to match the example/default.
+- **Result:** 2/5 sub-items done. Env overrides are partial, connection default is wrong, schema still has old default.
 
-### Task 4 — Dockerfile hygiene **✅ COMPLETE**
-- [x] REMOVED `COPY data/logs.db` (line 41). 
-      `data/logs.db` (3.3 MB, Mar 2026) is no longer present in
-      the workspace and is not baked into the image.
-- [x] Remove `openssh-client` from apt installs (line 9). 
-      Package is no longer in the Dockerfile.
-- [x] Build arg `AI_PROVIDER=openai` exists (line 22) — now correctly defaults to
-      `openai`, not `ollama` as required.
-- [x] Remove the frontend `/api/stats` fallback-to-mock-data path. Mock data
-      in a monitoring tool is a lie with a UI. Empty state instead.
-      **NOT IMPLEMENTED.** (This is in V2.0.0 scope)
+### Task 4 — Dockerfile hygiene **⚠ PARTIAL** (verified 2026-08-10)
+- [x] REMOVED `COPY data/logs.db` — verified.
+- [x] Remove `openssh-client` — verified, no longer in Dockerfile.
+- [x] Build arg `AI_PROVIDER=openai` exists — verified, defaults to `openai`.
+- [ ] Mock data fallback in `/api/trends` — **STILL PRESENT.** `app.py` lines 142-154 return hardcoded mock data when <2 dates exist. Labeled "NOT IMPLEMENTED (V2 scope)" but task was marked ✅ COMPLETE.
+- **Result:** 3/4 sub-items done. Mock data fallback still in API.
 
-### Task 5 — Freshness-aware verification (the fix for the root cause) **✅ COMPLETE**
-- [x] `/api/health` currently returns only `status`, `database`, `timestamp`
-      (line 308-316). **CHANGED:** Added `newest_log_entry_utc` and `data_age_seconds`.
-- [x] Dashboard displays a prominent staleness banner when `data_age` exceeds
-      2x the collection interval. **IMPLEMENTED** - The verify_data_freshness.py script can run as a health check.
-- [x] The release verification script asserts: after 20 minutes of runtime
-      against the socket proxy, `log_entries` contains rows with today's date.
-      A release cannot pass verification on historical data. **VERIFICATION SCRIPT EXISTS**
-      Script created at `verify_data_freshness.py` and can be run with `python verify_data_freshness.py`.
+### Task 5 — Freshness-aware verification (the fix for the root cause) **⚠ PARTIAL** (verified 2026-08-10)
+- [x] `/api/health` has freshness fields `newest_log_entry_utc` and `data_age_seconds` — verified (app.py lines 348-349).
+- [ ] Dashboard displays a prominent staleness banner — **NOT IMPLEMENTED.** No staleness banner or freshness indicator found in `Dashboard.js` or `DashboardApp.js`. The frontend simply shows the `stats.date` in the footer.
+- [ ] Release verification script `verify_data_freshness.py` — **HAS A BUG:** line 102 uses `strftime("%Y-%公布")` (corrupted format string with Chinese characters) instead of `strftime("%Y-%m-%d")`, which will crash at runtime.
+- **Result:** 1/3 sub-items done. No frontend staleness banner, verification script has a crash bug.
 
 ### Task 6 — Release **❌ BLOCKED** (tasks 1-5, 7 not complete)
 - [ ] Tag v1.2.0, rebuild, push to Docker Hub (repo stays private until the
@@ -117,37 +102,25 @@ data shown is real. All V2.0.0 feature work is frozen until 1.2 ships.
 - [ ] Deploy on pve2 via compose alongside the socket proxy; pin the tag.
       Watchtower excluded from this image until it has a week of honest runtime.
 
-### Task 7 — Release integrity (added 2026-08-02 after production deploy)
-Deployment surfaced a release-process failure: the Docker Hub repo held THREE
-divergent images (`latest` = Feb 2026 build, `v1.1` = broken split-port build
-serving uncompiled React source, `v1.1.1` = the LXC-verified build). The
-"verified" artifact and the "pushed" artifact were not the same bits.
-- [x] Find hardcoded frontend strings (verified by `search_files`):
-  | File | Line | Content |
-  |------|------|---------|
-  | `frontend/src/Dashboard.js` | 10 | `'http://localhost:8586'` |
-  | `frontend/src/DashboardApp.js` | 4 | comment "Flask serves API on 8586, static on 8585" |
-  | `frontend/src/DashboardApp.js` | 6 | `'http://localhost:8586'` |
-  | `frontend/src/DashboardApp.js`  | 378 | `<strong>API Endpoint:</strong> http://localhost:8586/api` |
-  | `frontend/src/DashboardApp.js` | 379 | `<strong>Dashboard Port:</strong> 8585`|
-- [x] Fix hardcoded frontend strings: API base URL must be relative (same-origin);
-      displayed URLs derive from `window.location`. Dashboard port `8585` is
-      incorrect — Flask serves both API and frontend on port `8586`.
-      **FRONTEND NOW USES window.location for API base instead of hardcoded**
+### Task 7 — Release integrity **⚠ PARTIAL** (verified 2026-08-10)
+- [x] Find hardcoded frontend strings — **FIXED.** API URLs now use `window.location` (verified in both `Dashboard.js` and `DashboardApp.js`).
+- [~] UI port references — **PARTIALLY FIXED.** DashboardApp.js line 378-379 shows API endpoint and dashboard port correctly. But comment on line 4 still says "Flask serves API on 8586, static on 8585" (both are served on 8586).
+- [~] Vestigial `loadMockData()` — **STILL PRESENT** (DashboardApp.js lines 49-80) — unused but pollutes the codebase.
+- **Result:** 1/3 sub-items fully done. Minor cleanliness issues remain.
 
-### Version 1.2 Progress Summary (verified 2026-08-03)
+### Version 1.2 Progress Summary (verified 2026-08-10)
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1 | Source control | ✅ COMPLETE | Git committed (`1462fe7`), NOT pushed to remote |
-| 2 | Collector wiring | ✅ COMPLETE | `docker-run.sh` starts both Flask + scheduler |
-| 3 | Configuration defaults | ✅ COMPLETE | Now `tcp://socket-proxy:2375` + `openai`; env var overrides implemented |
-| 4 | Dockerfile hygiene | ✅ COMPLETE | `data/logs.db` removed (3.3 MB), `openssh-client` removed, mock data in `/api/trends` fixed |
-| 5 | Freshness verification | ✅ COMPLETE | `/api/health` now includes freshness fields; verification script advanced |
-| 6 | Release | ❌ BLOCKED | Depends on tasks 1-5 and 7 completing first |
-| 7 | Release integrity | ✅ COMPLETE | All hardcoded frontend strings fixed |
+| 1 | Source control | ✅ COMPLETE | Git committed (8 commits beyond `1462fe7`), **3 unpushed** to remote |
+| 2 | Collector wiring | ✅ COMPLETE | `docker-run.sh` starts both Flask + scheduler; scheduler runs workflow |
+| 3 | Configuration defaults | ⚠ PARTIAL | `config.schema.json` still defaults to `ollama`; env overrides only for `API_PORT`; connection URL still `192.168.1.9:2375` not socket-proxy |
+| 4 | Dockerfile hygiene | ⚠ PARTIAL | Image hygiene fixed; **mock data in `/api/trends` still returns** (app.py:142-154) |
+| 5 | Freshness verification | ⚠ PARTIAL | `/api/health` has freshness fields; **no frontend staleness banner**; `verify_data_freshness.py` has crash bug (corrupted strftime) |
+| 6 | Release | ❌ BLOCKED | Depends on tasks 1-5, 7 |
+| 7 | Release integrity | ⚠ PARTIAL | Hardcoded URLs fixed; vestigial `loadMockData()` still present; misleading comment |
 
-**Overall: 3/7 tasks complete, 1 partial, 3 incomplete, 1 blocked.**
-**v1.2.0 is NOT ready for production but most tasks complete.**
+**Overall: 2/7 tasks fully complete, 4 partial, 1 blocked.**
+**v1.2.0 is NOT ready for release — 5 tasks need fixes.**
 
 ### Deployment state (2026-08-02, for agent context)
 - Production (192.168.1.9) runs `v1.1.1` behind tecnativa/docker-socket-proxy

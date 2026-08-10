@@ -33,18 +33,20 @@ def load_config():
 # Get configuration
 config = load_config()
 
-# Database path - check if configured, use default if not
-if 'database' in config and 'path' in config['database']:
-    DB_PATH = Path(config['database']['path'])
-else:
-    # Default fallback
-    DB_PATH = PROJECT_ROOT / "data" / "logs.db"
+# Database path - check env var override first, then config, then default
+DB_PATH = Path(os.environ.get("DB_PATH", ""))
+if not DB_PATH or not DB_PATH.name:
+    if 'database' in config and 'path' in config['database']:
+        DB_PATH = Path(config['database']['path'])
+    else:
+        # Default fallback
+        DB_PATH = PROJECT_ROOT / "data" / "logs.db"
 
 
 def get_db():
     """Get a database connection."""
     import sqlite3
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -139,19 +141,8 @@ def get_trends():
 
     if len(rows) < 2:
         conn.close()
-        # Return mock trend data if not enough dates
-        return jsonify([
-            {
-                "name": "cloudflared-tunnel",
-                "today": {"logs": 6, "errors": 6, "warnings": 0},
-                "previous": {"logs": 0, "errors": 0, "warnings": 0},
-            },
-            {
-                "name": "ollama",
-                "today": {"logs": 286, "errors": 11, "warnings": 0},
-                "previous": {"logs": 0, "errors": 0, "warnings": 0},
-            },
-        ])
+        # Not enough data for trend comparison — return empty
+        return jsonify([])
 
     date1 = rows[0]["date"]  # most recent
     date2 = rows[1]["date"]  # second most recent

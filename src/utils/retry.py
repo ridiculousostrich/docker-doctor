@@ -2,6 +2,7 @@
 Retry logic with exponential backoff for AI and external service calls.
 """
 
+import functools
 import time
 import logging
 from typing import Callable, Any, Optional
@@ -57,7 +58,7 @@ def retry_with_backoff(func: Callable, max_retries: int = 3, base_delay: float =
     raise Exception("Unexpected state in retry_with_backoff")
 
 
-def retry_ai_call(ai_function: Callable, max_retries: int = 3, base_delay: float = 2.0) -> Any:
+def retry_ai_call(ai_function: Callable) -> Callable:
     """
     Specialized retry decorator for AI summarization calls.
     
@@ -74,11 +75,19 @@ def retry_ai_call(ai_function: Callable, max_retries: int = 3, base_delay: float
             'network', 'failed to connect', 'unavailable'
         ]
         return any(keyword in error_str for keyword in retryable_errors)
-    
-    return retry_with_backoff(ai_function, max_retries, base_delay, should_retry_ai_exception)
+
+    @functools.wraps(ai_function)
+    def wrapper(*args, **kwargs):
+        return retry_with_backoff(
+            lambda: ai_function(*args, **kwargs),
+            max_retries=3,
+            base_delay=2.0,
+            should_retry=should_retry_ai_exception
+        )
+    return wrapper
 
 
-def retry_discord_call(webhook_function: Callable, max_retries: int = 3, base_delay: float = 1.0) -> bool:
+def retry_discord_call(webhook_function: Callable) -> Callable:
     """
     Specialized retry for Discord webhook notifications.
     
@@ -107,8 +116,16 @@ def retry_discord_call(webhook_function: Callable, max_retries: int = 3, base_de
             'connection', 'timeout', 'network', 'failed to connect'
         ]
         return any(keyword in error_str for keyword in retryable_errors)
-    
-    return retry_with_backoff(webhook_function, max_retries, base_delay, should_retry_discord_exception)
+
+    @functools.wraps(webhook_function)
+    def wrapper(*args, **kwargs):
+        return retry_with_backoff(
+            lambda: webhook_function(*args, **kwargs),
+            max_retries=3,
+            base_delay=1.0,
+            should_retry=should_retry_discord_exception
+        )
+    return wrapper
 
 
 # Usage example:

@@ -3,6 +3,7 @@ Discord notification system for daily reports.
 """
 
 import sys
+import os
 from pathlib import Path
 import yaml
 from discord_webhook import DiscordWebhook, DiscordEmbed
@@ -40,11 +41,14 @@ def send_discord_notification(report_data, report_file_path=None):
     """
     config = load_config()
 
-    if not config or 'discord' not in config:
-        print("Discord not configured in config.yaml")
-        return False
+    # Check env var first, then config
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-    webhook_url = config['discord']['webhook_url']
+    if not webhook_url:
+        if not config or 'discord' not in config:
+            print("Discord not configured in config.yaml")
+            return False
+        webhook_url = config['discord']['webhook_url']
 
     if 'YOUR_WEBHOOK' in webhook_url:
         print("Please update webhook_url in config.yaml")

@@ -75,7 +75,7 @@
             "openai",
             "anthropic"
           ],
-          "default": "ollama"
+          "default": "openai"
         },
         "host": {
           "type": "string",

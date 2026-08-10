@@ -99,7 +99,7 @@ def check_for_stale_data_indicators():
             print(f"Latest summary date: {latest_date}")
             # The dashboard should ideally show current (today) data, not old dates
             if latest_date != datetime.now().strftime("%Y-%m-%d"):
-                print(f"WARNING: Latest summary date {latest_date} is not today ({datetime.now().strftime('%Y-%公布')})")
+                print(f"WARNING: Latest summary date {latest_date} is not today ({datetime.now().strftime('%Y-%m-%d')})")
                 return False
             else:
                 print("SUCCESS: Latest summary is for today")

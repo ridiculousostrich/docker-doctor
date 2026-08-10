@@ -12,11 +12,15 @@ import sys
 import logging
 
 # Configure logging
+logs_dir = Path(__file__).parent.parent / "logs"
+logs_dir.mkdir(parents=True, exist_ok=True)
+log_path = logs_dir / "scheduler.log"
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("/workspace/docker-doctor/logs/scheduler.log"),
+        logging.FileHandler(str(log_path)),
         logging.StreamHandler()
     ]
 )

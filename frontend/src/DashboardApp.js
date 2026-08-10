@@ -1,10 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import './DashboardApp.css';
 
-// API base URL - same host, different port (Flask serves API on 8586, static on 8585)
+// API base URL - same host and port (Flask serves both API and static on 8586)
 const API_BASE = window.location.hostname === 'localhost'
   ? `${window.location.protocol}//${window.location.hostname}:8586`
   : `${window.location.protocol}//${window.location.hostname}:8586`;
+
+function StalenessBanner({ statsDate }) {
+  if (!statsDate) return null;
+
+  const today = new Date();
+  const dataDate = new Date(statsDate + 'T00:00:00');
+  const diffDays = Math.floor((today - dataDate) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 1) return null; // Data is fresh enough
+
+  const isCritical = diffDays > 7;
+  const bannerStyle = {
+    backgroundColor: isCritical ? '#e74c3c' : '#f39c12',
+    color: '#fff',
+    padding: '12px 20px',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    marginBottom: '10px',
+    borderRadius: '4px',
+  };
+
+  return (
+    <div style={bannerStyle}>
+      ⚠ STALE DATA: The dashboard shows data from {statsDate} ({diffDays} days ago).
+      {' '}{isCritical
+        ? 'The data pipeline may not be running. Check the scheduler and collector.'
+        : 'Data collection may be behind schedule. Check if the collector is active.'}
+    </div>
+  );
+}
 
 function DashboardApp() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -46,38 +77,6 @@ function DashboardApp() {
     fetchData();
   }, []);
 
-  // Fallback mock data if API fails
-  const loadMockData = () => {
-    setStats({
-      date: new Date().toISOString().split('T')[0],
-      container_count: 24,
-      total_logs: 12048,
-      total_errors: 32,
-      total_warnings: 47,
-      problem_containers: [
-        { name: 'nginx-app', error_count: 5, warning_count: 2, ai_summary: 'High error rate in access logs' },
-        { name: 'mysql-db', error_count: 3, warning_count: 1, ai_summary: 'Connection pool exhausted' },
-        { name: 'redis-cache', error_count: 2, warning_count: 3, ai_summary: 'Cache eviction warnings' },
-        { name: 'api-server', error_count: 1, warning_count: 2, ai_summary: 'Slow response times' },
-        { name: 'log-rotate', error_count: 0, warning_count: 1, ai_summary: 'Disk space warning' },
-      ],
-      healthy_containers: [
-        { name: 'frontend-app', total_logs: 1200 },
-        { name: 'backend-api', total_logs: 890 },
-        { name: 'logging-service', total_logs: 450 },
-        { name: 'monitoring-tool', total_logs: 200 },
-        { name: 'backup-service', total_logs: 150 },
-      ],
-    });
-    setTrends([
-      { name: 'cloudflared-tunnel', today: { logs: 6, errors: 6, warnings: 0 }, previous: { logs: 0, errors: 0, warnings: 0 } },
-      { name: 'ollama', today: { logs: 286, errors: 11, warnings: 0 }, previous: { logs: 0, errors: 0, warnings: 0 } },
-    ]);
-    setNewErrors([
-      { container_name: 'nginx-app', error_message: '500 Internal Server Error' },
-      { container_name: 'mysql-db', error_message: 'Connection timeout' },
-    ]);
-  };
 
   if (loading) {
     return (
@@ -107,6 +106,8 @@ function DashboardApp() {
         <h1>Docker Doctor Dashboard v2.0.0</h1>
         <p className="dashboard-subtitle">Real-time Docker container monitoring system</p>
       </header>
+
+      <StalenessBanner statsDate={stats?.date} />
 
       <nav className="dashboard-nav">
         <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>
