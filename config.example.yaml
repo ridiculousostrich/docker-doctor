@@ -1,26 +1,38 @@
 # Example configuration file
-# Copy to config.yaml and customize
+# Copy to config.yaml and customize with your own values
+# This file is safe to commit — it contains NO real secrets.
 
 docker:
+  # Docker connection string
+  # For socket-proxy: "tcp://socket-proxy:2375"
+  # For Docker socket: "unix:///var/run/docker.sock"
   connection: "tcp://socket-proxy:2375"
+  # Override with specific container names, or leave empty to monitor all
   containers: []
+  # Number of days of history to collect
   log_days: 1
 
 database:
   path: "data/logs.db"
 
 ai:
-  provider: "openai"
-  host: "http://192.168.15.123:8000/v1"
-  model: "qwen36-planner"
+  # Provider: "ollama" (supported), "openai" or "anthropic" (future support)
+  provider: "ollama"
+  # Ollama server endpoint (only used with ollama provider)
+  host: "http://YOUR_OLLAMA_HOST:11434"
+  model: "YOUR_MODEL_NAME"
   temperature: 0.3
 
 discord:
   # Discord webhook URL for notifications
+  # Replace with your actual webhook URL from Discord channel settings
   webhook_url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
-
   # When to send notifications
   notify_on_errors: true
   notify_on_warnings: true
   warning_threshold: 50
   always_send_daily: false
+
+monitoring:
+  # Time to run the daily monitoring workflow (24h format)
+  schedule_time: "06:00"

@@ -4,59 +4,61 @@
 
 ### Prerequisites
 
-- Proxmox VE environment (pve2)
-- Docker and Docker Compose installed
-- Access to the HAOS VM (if applicable)
+- Docker and Docker Compose installed on your server
+- (Optional) A Discord webhook URL for notifications
+- (Optional) A running Ollama server (or compatible OpenAI-compatible endpoint)
 
 ### Deployment Steps
 
-1. Ensure your Proxmox environment is properly configured:
-   - HAOS VM is running with DHCP reservation for a static IP
-   - Docker socket is accessible
-
-2. Clone the Docker Doctor repository:
+1. Clone the Docker Doctor repository:
    ```bash
    git clone https://github.com/yourusername/docker-doctor.git
    cd docker-doctor
-   ``"
+   ```
 
-3. Create a configuration file based on the example:
+2. Create a configuration file based on the example:
    ```bash
    cp config.example.yaml config.yaml
    # Edit config.yaml with your actual configuration values
    ```
 
-4. Build and deploy the Docker Doctor application:
+3. (Recommended) Deploy with Docker Compose for production:
    ```bash
-   # Build the Docker image with the desired AI provider
-   docker-compose build --build-arg AI_PROVIDER=ollama
+   # Build the Docker image
+   docker compose build --build-arg AI_PROVIDER=ollama
    
    # Start the containers
-   docker-compose up -d
+   docker compose up -d
    ```
 
-5. Verify the deployment:
+4. Verify the deployment:
    ```bash
    # Check container status
-   docker-compose ps
+   docker compose ps
    
    # View logs
-   docker-compose logs -f docker-doctor
+   docker compose logs -f docker-doctor
    ```
 
-6. Access the dashboard at: http://localhost:8585
+5. Access the dashboard at: http://localhost:8586
 
 ### Port Configuration
 
-- **Frontend**: Port 8585 (React UI)
-- **Backend API**: Port 8586 (Flask API)
+- **Dashboard (React + Flask)**: Port 8586
+- The Flask API serves the React frontend and REST API on the same port
 
-### Firewall Configuration
+### Configuration
 
-Ensure your firewall allows traffic on port 8585 for the dashboard:
+See `config.example.yaml` for all available options. Key settings to customize:
 
-- If using Proxmox firewall: Allow TCP traffic on port 8585
-- If using external firewall: Forward port 8585 to your Proxmox server
+| Setting | Description |
+|---------|-------------|
+| `docker.connection` | Docker socket path or socket-proxy TCP address |
+| `ai.provider` | AI backend (`ollama` currently supported) |
+| `ai.host` | Ollama server URL |
+| `ai.model` | Model name (e.g., `qwen2.5:32b-instruct-q4_K_M`) |
+| `discord.webhook_url` | Discord webhook for notifications |
+| `monitoring.schedule_time` | Daily monitoring time in 24h format |
 
 ### Updates
 
@@ -67,41 +69,86 @@ To update to a newer version:
 git pull origin main
 
 # Rebuild the image
- docker-compose build --build-arg AI_PROVIDER=ollama
+docker compose build --build-arg AI_PROVIDER=ollama
 
 # Restart the containers
-docker-compose down && docker-compose up -d
+docker compose down && docker compose up -d
 ```
 
 ### Troubleshooting
 
 #### Dashboard Not Accessible
 
-- Verify the container is running: `docker-compose ps`
-- Check if port 8585 is exposed in the container: `docker inspect docker-doctor | grep "8585"`
-- Verify your firewall allows traffic on port 8585
+- Verify the container is running: `docker compose ps`
+- Check if port 8586 is exposed: `docker inspect docker-doctor | grep "8586"`
+- Verify your firewall allows traffic on port 8586
 
 #### API Not Responding
 
-- Check the API container logs: `docker-compose logs docker-doctor`
+- Check the container logs: `docker compose logs docker-doctor`
 - Verify the SQLite database exists at `/app/data/logs.db`
 - Ensure the database has the correct schema and data
 
 #### AI Summarization Issues
 
-- Verify your AI provider (Ollama, OpenAI, etc.) is properly configured
-- Check that required API keys or endpoints are correctly set in config.yaml
-- Ensure your AI provider is running and accessible
+- Verify your Ollama server is running and accessible from the Docker Doctor container
+- Check that `ai.host` in config.yaml points to the correct Ollama endpoint
+- Verify the model specified in `ai.model` exists on your Ollama server
+- Check container logs for AI provider errors
+
+### Using docker-socket-proxy (Recommended)
+
+For security, it's recommended to use `tecnativa/docker-socket-proxy` instead of mounting the Docker socket directly:
+
+```yaml
+services:
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: socket-proxy
+    environment:
+      - CONTAINERS=1
+      - INFO=1
+      - NETWORKS=1
+      - IMAGES=1
+      - PING=1
+      - VERSION=1
+      - POST=0  # Block mutations
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - doctor-internal
+
+  docker-doctor:
+    image: ridiculousostrich/docker-doctor:v2.0
+    container_name: docker-doctor
+    depends_on:
+      - socket-proxy
+    ports:
+      - "8586:8586"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - doctor-data:/app/data
+    networks:
+      - doctor-internal
+    environment:
+      - TZ=UTC
+
+networks:
+  doctor-internal:
+    internal: true
+
+volumes:
+  doctor-data:
+```
 
 ### Backup and Recovery
 
 Regularly backup the data volume:
 
 ```bash
-# Create a backup of the data volume
-mkdir -p /opt/docker-doctor/backups
-docker run --rm -v docker-doctor-data:/source -v /opt/docker-doctor/backups:/backup alpine tar -czf /backup/docker-doctor-backup-$(date +%Y%m%d).tar.gz -C /source .
+# Create a backup
+docker run --rm -v doctor-data:/source -v $(pwd)/backups:/backup alpine tar -czf /backup/docker-doctor-backup-$(date +%Y%m%d).tar.gz -C /source .
 
 # Restore from backup
-docker run --rm -v docker-doctor-data:/target -v /opt/docker-doctor/backups:/backup alpine tar -xzf /backup/docker-doctor-backup-YYYYMMDD.tar.gz -C /target
+docker run --rm -v doctor-data:/target -v $(pwd)/backups:/backup alpine tar -xzf /backup/docker-doctor-backup-YYYYMMDD.tar.gz -C /target
 ```

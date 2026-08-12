@@ -122,7 +122,7 @@ All code dependencies (Tasks 1–5, 7) are resolved. Only operator action remain
 **v1.2.0 is ready for release — only operator action remains (tag, push, deploy).**
 
 ### Deployment state (2026-08-02, for agent context)
-- Production (192.168.1.9) runs `v1.1.1` behind tecnativa/docker-socket-proxy
+- Production (YOUR_SERVER_IP) runs behind tecnativa/docker-socket-proxy
   (CONTAINERS/INFO/PING/VERSION allowed, POST=0, internal-only network).
   Verified: proxy reachable from app container, mutations 403, LAN blocked.
 - v1.2's collector target is `tcp://socket-proxy:2375`. The pathway is
