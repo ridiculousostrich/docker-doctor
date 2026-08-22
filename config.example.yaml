@@ -33,6 +33,14 @@ discord:
   warning_threshold: 50
   always_send_daily: false
 
+dashboard:
+  auth:
+    # Enable HTTP Basic Authentication for the web dashboard
+    # Disable for local-only deployments, enable if exposed to any network
+    enabled: false
+    username: "admin"
+    password: "changeme"
+
 monitoring:
   # Time to run the daily monitoring workflow (24h format)
   schedule_time: "06:00"

@@ -28,7 +28,7 @@ docker run -d \
   -p 8586:8586 \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
   -v doctor-data:/app/data \
-  ridiculousostrich/docker-doctor:v2.0
+  ridiculousostrich/docker-doctor:v2.1
 ```
 
 ### 3. Open the dashboard
@@ -58,7 +58,7 @@ services:
       - doctor-internal
 
   docker-doctor:
-    image: ridiculousostrich/docker-doctor:v2.0
+    image: ridiculousostrich/docker-doctor:v2.1
     container_name: docker-doctor
     depends_on:
       - socket-proxy

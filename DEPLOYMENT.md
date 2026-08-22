@@ -119,7 +119,7 @@ services:
       - doctor-internal
 
   docker-doctor:
-    image: ridiculousostrich/docker-doctor:v2.0
+    image: ridiculousostrich/docker-doctor:v2.1
     container_name: docker-doctor
     depends_on:
       - socket-proxy

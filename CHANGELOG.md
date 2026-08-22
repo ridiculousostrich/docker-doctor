@@ -12,7 +12,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-### Removed
+## [2.1.0] - 2026-08-22
+
+### Added
+
+- HTTP Basic Authentication for the web dashboard (config-driven, env var overrides)
+- Dashboard auth config section in `config.example.yaml`
+- `flask-httpauth` dependency for secure credential verification
+- `/api/health` endpoint exempt from auth for monitoring/health checks
+
+### Changed
+
+- Dockerfile: removed duplicate `backend/api/requirements.txt` copy/install (reduced build time and image layers)
+- Dockerfile: changed `ARG AI_PROVIDER` default from `openai` to `ollama` to match actual usage
+- `docker-compose.yml`: switched from direct Docker socket mount to `docker-socket-proxy` for improved security
+- `docker-compose.yml`: removed orphan port 8585 (only 8586 is used)
+- `docker-compose.yml`: changed config path from `/opt/docker-doctor/config.yaml` to `./config.yaml` for portability
+- `docker-compose.yml`: placed services on an internal network with socket-proxy
+- `README.md`: updated all version references to v2.1, improved compose examples
+- `build-docker-image.sh`: updated to v2.1 with proper build args and `latest` tag
 
 ## [1.0.0] - 2026-08-01
 
@@ -37,7 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Modular architecture with clear component separation
 - Config validation using `config.schema.json`
 - Daily report generation with health indicators (🟢🟡🔴)
-- Trend analysis comparing today’s data with yesterday’s metrics
+- Trend analysis comparing today's data with yesterday's metrics
 
 ### Fixed
 
@@ -49,5 +67,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - None
 
-[Unreleased]: https://github.com/ridiculousostrich/docker-doctor/compare/v1.0.0...HEAD
+[2.1.0]: https://github.com/ridiculousostrich/docker-doctor/compare/v1.0.0...v2.1.0
 [1.0.0]: https://github.com/ridiculousostrich/docker-doctor/compare/v1.0.0...HEAD
