@@ -59,7 +59,7 @@ def run_workflow():
         print()
         try:
             # Don't capture output - let it stream to console
-            result = subprocess.run(command, check=True, timeout=300)  # 5-minute timeout
+            result = subprocess.run(command, check=True, timeout=600)  # 10-minute timeout
             logger.info("Completed step: %s", step_name)
             print()
             print(f"✓ {step_name} completed")

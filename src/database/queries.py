@@ -37,6 +37,8 @@ def get_connection():
 
     # Enable foreign key constraints
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
 
     return conn
 
